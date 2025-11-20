@@ -8,6 +8,7 @@ pas_peak2gene(
   gr_pas = pas_peak,
   samplenames = samplenames,
   chrs = chrs,
+  outpath,
   threads = 24
 )
 }
@@ -17,6 +18,8 @@ pas_peak2gene(
 \item{samplenames}{A vector containing sample names.}
 
 \item{chrs}{A vector containing chromatin to use.}
+
+\item{outpath}{Output directory consistent with previous steps.}
 
 \item{threads}{The number of threads to be used for parallel computing.}
 }

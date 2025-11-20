@@ -15,6 +15,16 @@
 pas_fit_model <- function(samplenames,chrs,outpath,gr_pas = pas_peak,cache.dist = F,
                           intronanno = intronanno,threads=24,
                           intron.remove = T,sampling.frac = 4/100){
+
+  if (missing(samplenames) || length(samplenames) == 0) stop("samplenames cannot be empty")
+  if (missing(chrs) || length(chrs) == 0) stop("chrs cannot be empty")
+  if (missing(outpath) || !dir.exists(outpath)) stop("outpath does not exist")
+  if (!methods::is(gr_pas, "GRanges")) stop("gr_pas must be a GRanges object")
+  if (!methods::is(intronanno, "GRanges")) stop("intronanno must be a GRanges object")
+  if (!is.numeric(threads) || threads < 1) stop("threads must be a positive integer")
+  if (!is.null(sampling.frac) && (sampling.frac <= 0 || sampling.frac > 1)) {
+    stop("sampling.frac must be between 0 and 1 or NULL")
+  }
  
   if (!file.exists(paste0(outpath,"/model"))){
     dir.create(paste0(outpath,"/model"))
@@ -43,9 +53,13 @@ pas_fit_model <- function(samplenames,chrs,outpath,gr_pas = pas_peak,cache.dist 
     
     saveRDS(plot_dist_data,file = paste0(outpath,"/model/all.data.rds"))
     
-    train.index = sample(1:nrow(plot_dist_data),100000)
-    train_data <- plot_dist_data[train.index,]
+    if (nrow(plot_dist_data) > 200000){
+      train.index = sample(1:nrow(plot_dist_data),100000)
+    } else {
+      train.index = sample(1:nrow(plot_dist_data),floor(nrow(plot_dist_data)/2))
+    }
     
+    train_data <- plot_dist_data[train.index,]
     saveRDS(train_data,file = paste0(outpath,"/model/train_data.rds"))
     
     evaluate_data <- plot_dist_data[1:nrow(plot_dist_data) %ni% train.index,]
@@ -207,7 +221,7 @@ pas_fit_model <- function(samplenames,chrs,outpath,gr_pas = pas_peak,cache.dist 
   end(gr_pas) = end(gr_pas) - 16
   
   saveRDS(gr_pas,file = paste0(outpath,"/model/plot.pas.gr.rds"))
-  plot_pas_stat(plotdata = plot_dist_data,gr_pas = gr_pas)
+  plot_pas_stat(plotdata = plot_dist_data,gr_pas = gr_pas,outpath = outpath)
 }
 
 pas_bulk <- function(samplenames,chrs,outpath,cell.metadata = cell.metadata,threads=24){
@@ -541,10 +555,23 @@ pas_impute <- function(matDR = sc.pas.merged@reductions$pca@cell.embeddings,
 
 PasUsageScore <- function(sc.pas = pas_sc_count,gr_pas,min.pas.cutoff = 5,pseudo_count = 0.1,threads = 24,by = "utr",out.matrix = F){
   
+  if (missing(sc.pas)) stop("sc.pas cannot be missing")
+  if (is.null(rownames(sc.pas)) || is.null(colnames(sc.pas))) stop("sc.pas must have row/col names")
+  if (!methods::is(gr_pas, "GRanges")) stop("gr_pas must be a GRanges object")
+  if (!all(c("peak","gene_id","anno","anno.region","rank") %in% colnames(mcols(gr_pas)))) {
+    stop("gr_pas must contain peak/gene_id/anno/anno.region/rank metadata")
+  }
+  if (!by %in% c("all","utr")) stop("by must be all or utr")
+  if (!is.numeric(min.pas.cutoff) || min.pas.cutoff < 0) stop("min.pas.cutoff must be non-negative")
+  if (!is.numeric(pseudo_count) || pseudo_count < 0) stop("pseudo_count must be non-negative")
+  if (!is.numeric(threads) || threads < 1) stop("threads must be positive")
+  
   plan(sequential)
-  plan(multisession, workers= threads)
-  peak.index = data.frame(gr_pas)[,c("peak","gene_id","anno", "anno.region","rank")]
-  peak.index = peak.index[peak.index$peak %in% rownames(sc.pas),]
+  if (threads > 1) {
+    plan(multisession, workers = threads)
+  }
+  peak.index <- data.table::as.data.table(data.frame(gr_pas)[,c("peak","gene_id","anno", "anno.region","rank")])
+  peak.index <- peak.index[peak %in% rownames(sc.pas)]
   
   if (by == "all"){
     gene.index <- table(peak.index$gene_id)
@@ -563,80 +590,50 @@ PasUsageScore <- function(sc.pas = pas_sc_count,gr_pas,min.pas.cutoff = 5,pseudo
   }
   
   
-  if (out.matrix){
-      pas_sc_score <-  future_lapply(colnames(sc.pas),function(x){
-        
-        tmp1 <- data.frame(peak = rownames(sc.pas), value = sc.pas[,x])
-        tmp1 <- merge(tmp1,peak.index)
-        
-        tmp1 <- tmp1[order(tmp1$gene_id),]
-        
-        ## filter low identified genes
-        tmp2 <- tmp1 %>%
-          group_by(gene_id) %>%
-          mutate(score = sum(value))  %>%
-          filter(score < min.pas.cutoff)  %>%
-          summarise(score = sum(value))
-        tmp2$score <- NA
-        
-        ## apa score
-        tmp3 <- tmp1 %>%
-          group_by(gene_id) %>%
-          mutate(score = sum(value))  %>%
-          filter(score  >= min.pas.cutoff)  %>%
-          group_by(gene_id) %>%
-          arrange(rank) %>% mutate(rank2 = row_number()) %>% #desc(rank)
-          #mutate(score = (max(rank)-rank)*(value + pseudo_count)/sum(value+ pseudo_count)/max(rank))  %>%
-          mutate(score = (rank2 -1)/(max(rank2) -1)*(value + pseudo_count)/sum(value + pseudo_count))  %>%
-          summarise(score = sum(score))
-        
-        # order and export
-        tmp1 <- rbind(data.frame(tmp2),data.frame(tmp3))
-        tmp1 <- tmp1[order(tmp1$gene_id),]
-        rownames(tmp1) <- tmp1$gene_id
-        tmp1$gene_id <- NULL
-        return(tmp1)
-      })
-      
-      pas_sc_score <- do.call("cbind",pas_sc_score)
-      colnames(pas_sc_score) = colnames(sc.pas)
-      pas_sc_score_mean <- colMeans(pas_sc_score,na.rm = T)
-    
-      pas_sc_score <- list(score.mt = pas_sc_score,
-                           score.mean = pas_sc_score_mean)
-      
-      plan(sequential)
-
+  compute_scores <- function(values) {
+    tmp_dt <- data.table::data.table(peak = rownames(sc.pas), value = values)
+    tmp_dt <- merge(tmp_dt, peak.index, by = "peak")
+    tmp_dt[, gene_sum := sum(value), by = gene_id]
+    tmp_dt <- tmp_dt[gene_sum >= min.pas.cutoff]
+    if (nrow(tmp_dt) == 0) return(NULL)
+    tmp_dt <- tmp_dt[order(gene_id, rank)]
+    tmp_dt[, rank2 := seq_len(.N), by = gene_id]
+    tmp_dt[, score := (rank2 - 1) / pmax(1, max(rank2) - 1) * (value + pseudo_count) / sum(value + pseudo_count), by = gene_id]
+    tmp_dt[, .(score = sum(score)), by = gene_id]
   }
-    
-  if (!out.matrix){
-    pas_sc_score <-  future_lapply(colnames(sc.pas),function(x){
-      
-      tmp1 <- data.frame(peak = rownames(sc.pas), value = sc.pas[,x])
-      tmp1 <- merge(tmp1,peak.index)
-      
-      ## apa score
-      tmp1 <- tmp1 %>%
-        group_by(gene_id) %>%
-        mutate(score = sum(value))  %>%
-        filter(score  >= min.pas.cutoff)  %>%
-        group_by(gene_id) %>%
-        arrange(rank) %>% mutate(rank2 = row_number()) %>% #desc(rank)
-        #mutate(score = (max(rank)-rank)*(value + pseudo_count)/sum(value+ pseudo_count)/max(rank))  %>%
-        mutate(score = (rank2 -1)/(max(rank2) -1)*(value + pseudo_count)/sum(value + pseudo_count))  %>%
-        summarise(score = sum(score))
-      
-      gc()
-      return(mean(tmp1$score))
+  
+  if (out.matrix){
+      pas_sc_score <- future_lapply(seq_len(ncol(sc.pas)),function(idx){
+        res <- compute_scores(sc.pas[,idx])
+        if (is.null(res)) return(NULL)
+        res_vec <- res$score
+        names(res_vec) <- res$gene_id
+        res_vec
+      })
+      plan(sequential)
+      pas_sc_score <- Filter(Negate(is.null), pas_sc_score)
+      if (length(pas_sc_score) == 0) {
+        pas_sc_score <- list(score.mt = matrix(NA, nrow = 0, ncol = ncol(sc.pas)), score.mean = rep(NA, ncol(sc.pas)))
+      } else {
+        score_mat <- data.table::rbindlist(lapply(pas_sc_score, function(v) data.table::data.table(gene_id = names(v), score = v)), fill = TRUE)
+        score_mat_wide <- data.table::dcast(score_mat, gene_id ~ .I, value.var = "score")
+        score_matrix <- as.matrix(score_mat_wide[,-1])
+        rownames(score_matrix) <- score_mat_wide$gene_id
+        colnames(score_matrix) <- colnames(sc.pas)[seq_len(ncol(score_matrix))]
+        pas_sc_score <- list(score.mt = score_matrix,
+                             score.mean = colMeans(score_matrix, na.rm = TRUE))
+      }
+  } else {
+    pas_sc_score <- future_lapply(seq_len(ncol(sc.pas)),function(idx){
+      res <- compute_scores(sc.pas[,idx])
+      if (is.null(res)) return(NA_real_)
+      mean(res$score, na.rm = TRUE)
     })
-    
-    pas_sc_score <- do.call("c",pas_sc_score)
-    
     plan(sequential)
+    pas_sc_score <- unlist(pas_sc_score)
     names(pas_sc_score) <- colnames(sc.pas)
   }
   
   return(pas_sc_score)
 }
-
 

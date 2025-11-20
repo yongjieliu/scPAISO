@@ -7,7 +7,8 @@
 pas_peak_anno(
   gr_pas = pas_peak,
   gene.anno,
-  priority = c("utr3", "last.exon", "last.intron", "exon", "intron", "utr5")
+  priority = c("utr3", "last.exon", "last.intron", "exon", "intron", "utr5"),
+  outpath
 )
 }
 \arguments{
@@ -15,9 +16,9 @@ pas_peak_anno(
 
 \item{gene.anno}{A ranges list describing 3' UTR, exon, and intron.}
 
-\item{chrs}{A vector containing chromatin to use.}
+\item{priority}{Annotation priority order.}
 
-\item{threads}{The number of threads to be used for parallel computing.}
+\item{outpath}{Output directory where peakanno.pdf will be written.}
 }
 \description{
 pas peak annotation

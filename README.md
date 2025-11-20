@@ -1,7 +1,8 @@
 # Pipeline
+
 ## Mapping
 
-```
+``` bash
 # for example, you have two scRNA-seq library
 ## cellranger Read1 + Read2
 myindex=S1 S2
@@ -31,7 +32,9 @@ do
 done
 ```
 
-## Setup
+## APA analysis
+
+### Setup
 ``` r
 library(Rsamtools)
 library(dplyr)
@@ -41,6 +44,8 @@ library(GenomicAlignments)
 library(future.apply)
 library(rtracklayer)
 library(scales)
+#library(plyr)
+library(reshape2)
 
 library(fitdistrplus)
 
@@ -57,72 +62,73 @@ library('org.Hs.eg.db')
 '%ni%' <- Negate('%in%')
 
 library(scPAISO)
-outpath= "/home/youname/projects/apa/test/"
-gene.anno  <- readRDS("annotation.gene.hg38.rds")
+outpath= "./scPAISO/tests/pe/"
+gene.anno  <- readRDS("./scPAISO/tests/hg38/annotation.gene.hg38.rds")
 geneanno <- gene.anno$gene
 intronanno <-  gene.anno$intron
-chrs <- paste0("chr",c(1:22,"X"))
-chrom.size <- read.table("GRCh38.chrNameLength.txt")
+chrs <- paste0("chr",21:22)
+chrom.size <- read.table("./scPAISO/tests/hg38/chrNameLength.txt")
 colnames(chrom.size) <- c("seqnames","seqlengths")
 rownames(chrom.size) <- chrom.size$seqnames
-threads = 24
+threads = 4
 
-bam.r2 = paste0("S1Count/outs/possorted_genome_bam.bam","S2Count/outs/possorted_genome_bam.bam") # from cellranger
-bam.r1 = paste0("S1.R1.Aligned.sortedByCoord.out.bam","S1.R1.Aligned.sortedByCoord.out.bam") # from STAR
+bam.r2 = c("./scPAISO/tests/pe/ctl4_R2_chr21_22.bam", "./scPAISO/tests/pe/itp4_R2_chr21_22.bam") # subset from cellranger output
+bam.r1 = c("./scPAISO/tests/pe/ctl4_R1_chr21_22.bam", "./scPAISO/tests/pe/itp4_R1_chr21_22.bam") # subset from from STAR
 
-samplenames <- c("S1","S2")
+samplenames <- c("ctl4","itp4")
 
 # make a data.frame cell_meta
 ## cb = sample_cellbarcode
-## for example, S1_AAACCCAAGAGCCTGA-1, S2_AAACCCAGTCAATGGG-1
-cell_meta <- data.frame(cb = colnames(SeuratObj),celltype = SeuratObj$celltype,samplename = sc.merged$samplename)
+## for example, itp4_AAACCCAAGAGCCTGA-1
+cell_meta <- readRDS("./scPAISO/tests/pe/cell_meta.Rds")
+# cell_meta <- data.frame(cb = colnames(SeuratObj),celltype = SeuratObj$celltype,samplename = sc.SeuratObj$samplename)
 ```
 
-## Process bams
+### Process bams
 
 ``` r
-# To reduce memory usage and parallel computing, we split the bam file according to chromatin
-BamSplit(bam.split.sh,bam.r1,bam.r2,samplenames,outpath)
+# To achieve efficient parallel processing and reduce memory usage, we split the BAM file by chromatin.
+BamSplit("./scPAISO/inst/scripts/bam.split.sh",bam.r1,bam.r2,samplenames,outpath)
 # bam to data.frame
-ProcessBam(samplenames,chrs,outpath,geneanno,intronanno,cell.metadata = cell_meta,chrom.size, cache.bam2df= F,threads = 24)
+ProcessBam(samplenames,chrs,outpath,geneanno,intronanno,cell.metadata = cell_meta,chrom.size, cache.bam2df= F,threads = threads)
 ```
 
-## PAS peaks identification
+### PAS peaks identification
 
-```
+``` r
 # call peak
 pas_peak <- findPAS(samplenames,chrs,outpath,threads,cache.covdata = F,
-                    callpeak = "macs3",genomeSize = 2.7e9, cutOff = 10^-5,additionalParams = "--nomodel",
+                    callpeak = "~/anaconda3/bin/macs3",genomeSize = 2.7e9, cutOff = 10^-5,additionalParams = "--nomodel",
                     sum.count = 10,cpm.cutoff = 0.5,
                     min.gapwidth = 60,
                     BSg = BSgenome.Hsapiens.UCSC.hg38,literal = "AAAAAAAA",num_A = 10) 
 
 # mapping PAS peaks to genes
-pas_peak <- pas_peak2gene(gr_pas = pas_peak,samplenames = samplenames, chrs = chrs,threads = 24)
+pas_peak <- pas_peak2gene(gr_pas = pas_peak,samplenames = samplenames, chrs = chrs,outpath = outpath,threads = threads)
 
 # annotate PAS peaks: 3' UTR, 3' UTR expand, Last Exon, Other Exon, Last Intron, and Other Intron.
-pas_peak <- pas_peak_anno(pas_peak,gene.anno)
+pas_peak <- pas_peak_anno(pas_peak,gene.anno,outpath = outpath)
 
 # plot base frequence of surrounding PAS peak
-plot_base_freq(gr_pas = pas_peak,extend_base = 100,BSg = BSgenome.Hsapiens.UCSC.hg38,outname = "pas.100bp.freq.pdf"))
+plot_base_freq(gr_pas = pas_peak,extend_base = 100,BSg = BSgenome.Hsapiens.UCSC.hg38,outpath = outpath,outname = "pas.100bp.freq.pdf")
 ```
 
-## PA isoform quantification
+### PA isoform quantification
 
-```
+``` r
 # fitting model: weibull, gamma, or log-normal distribution
 pas_fit_model(samplenames,chrs,outpath,gr_pas = pas_peak,intronanno = intronanno,cache.dist = F,
-              intron.remove = T,threads=24,sampling.frac = 4/100)
+              intron.remove = T,threads=4,sampling.frac = 4/100)
 
 # PA isoform quantification: PAS peak X cell matrix 
 pas_sc_count <- pas_predict(gr_pas = pas_peak,samplenames,chrs,outpath,
                             geneanno = geneanno,intronanno = intronanno,intron.remove = T,
-                            cell.metadata = cell_meta,fitmodel = "weibull",threads=24)
+                            cell.metadata = cell_meta,fitmodel = "weibull",threads=threads)
 ```
 
-## APA rank score
+### APA rank score
 
-```
+``` r
 pas.rank.score <- PasUsageScore(pas_sc_count,gr_pas = pas_peak,min.pas.cutoff = 3,
-                                  pseudo_count = 0,threads = 24,by = "utr",out.matrix = F)
+                                  pseudo_count = 0,threads = threads,by = "utr",out.matrix = F)
 ```

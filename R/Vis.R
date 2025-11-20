@@ -24,7 +24,13 @@ enrichplot <- function(enrichout = enrichout,showsize = 10,showtitle = "Enrichme
   return(func.enrichplot)
 }
 
-plot_base_freq <- function(gr_pas = pas_peak,extend_base = 100,BSg = BSgenome.Hsapiens.UCSC.hg38,outname = "pas.100bp.freq.pdf",ylim = 0.8){
+plot_base_freq <- function(gr_pas = pas_peak,extend_base = 100,BSg = BSgenome.Hsapiens.UCSC.hg38,
+                           outpath, outname = "pas.100bp.freq.pdf",ylim = 0.8){
+  if (!methods::is(gr_pas, "GRanges")) stop("gr_pas  GRanges ")
+  if (!methods::is(BSg, "BSgenome")) stop("BSg  BSgenome ")
+  if (!is.numeric(extend_base) || extend_base <= 0) stop("extend_base ")
+  if (!is.numeric(ylim) || ylim <= 0) stop("ylim ")
+  if (missing(outpath) || !dir.exists(outpath)) stop("outpath ")
   plot_pas <- gr_pas
   start(plot_pas) <- gr_pas$WhichMaxs - extend_base
   end(plot_pas) <- gr_pas$WhichMaxs + extend_base
@@ -41,15 +47,16 @@ plot_base_freq <- function(gr_pas = pas_peak,extend_base = 100,BSg = BSgenome.Hs
     geom_line() + xlab("Position") + ylab("Base fraction") + ylim(0,ylim)
     guides(color=guide_legend(title="Base"))
   
-  pdf(paste0(outpath,outname),height = 5,width = 4)
+  pdf(file.path(outpath,outname),height = 5,width = 4)
   print(myplot)
   dev.off()
 }
 
-plot_pas_stat <- function(plotdata,gr_pas = gr_pas){ 
+plot_pas_stat <- function(plotdata,gr_pas = gr_pas,outpath){ 
+  if (missing(outpath) || !dir.exists(outpath)) stop("outpath ")
 
   print("Ploting")
-  pdf(paste0(outpath,"pas.dendity.R2PAS.pdf"),height = 5,width = 8)
+  pdf(file.path(outpath,"pas.dendity.R2PAS.pdf"),height = 5,width = 8)
   print(ggplot(plotdata, aes(x=log2(R2PAS+1))) + 
           geom_histogram(aes(y=..density..),
                          binwidth=.2,
@@ -63,7 +70,7 @@ plot_pas_stat <- function(plotdata,gr_pas = gr_pas){
   plotdata$dist[plotdata$strand == "-"]  <- 
     c(plotdata$R2PAS + plotdata$PAS -  plotdata$start)[plotdata$strand == "-"]
   
-  pdf(paste0(outpath,"pas.dendity.R2Peak.max.pdf"),height = 5,width = 8)
+  pdf(file.path(outpath,"pas.dendity.R2Peak.max.pdf"),height = 5,width = 8)
   print(ggplot(plotdata, aes(x=log2(dist + 1))) + 
           geom_histogram(aes(y=..density..),
                          binwidth=.2,
@@ -81,8 +88,8 @@ plot_pas_stat <- function(plotdata,gr_pas = gr_pas){
   myindex = myindex[plotdata$gene_id[from(myindex)] == gr_pas$gene_id[to(myindex)],]
   plotdata$pas_order <- as.numeric(table(queryHits(myindex))[1:nrow(plotdata)]) 
   
-  write.csv(table(plotdata$pas_order),file =  paste0(outpath,"/model/sta.closest.csv"))
-  pdf(paste0(outpath,"pas.dendity.pas.order.pdf"),height = 5,width = 4)
+  write.csv(table(plotdata$pas_order),file =  file.path(outpath,"model","sta.closest.csv"))
+  pdf(file.path(outpath,"pas.dendity.pas.order.pdf"),height = 5,width = 4)
   print(ggplot(plotdata, aes(x=plotdata$pas_order -1)) + 
           geom_histogram(binwidth = 1,colour="black", fill="#FF6666") +
           xlim(NA,7) +
