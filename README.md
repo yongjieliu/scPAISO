@@ -27,11 +27,6 @@ remotes::install_url("https://github.com/yongjieliu/scPAISO/archive/refs/tags/v0
 
 Lightweight demo data (chr21/22 subsets, annotations, intermediate results) are hosted on Zenodo (https://zenodo.org/records/17656388).
 
-1. Download the `scPAISO.test` archive from Zenodo and extract it beside this repository, e.g. `tar -xzf scPAISO.test.tar.gz`.
-2. Ensure the extracted folder is named `scPAISO.test/`; the Quick Start below assumes that path for both inputs and outputs.
-3. Alternative smoke datasets are shipped under `tests/<species>` for scripted validation.
-
-
 ## Quick Start (chr21/22 subset)
 
 Constructing genome annotation files:
