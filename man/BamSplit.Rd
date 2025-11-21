@@ -2,36 +2,28 @@
 % Please edit documentation in R/BamProcess.R
 \name{BamSplit}
 \alias{BamSplit}
-\title{Process bam files}
+\title{Split BAMs by chromosome}
 \usage{
-BamSplit(bam.split.sh, bam.r1, bam.r2, samplenames, outpath)
+BamSplit(
+  bam.split.sh = NULL,
+  bam.r1 = NULL,
+  bam.r2,
+  samplenames,
+  outpath = "./scPAISO.output"
+)
 }
 \arguments{
-\item{bam.split.sh}{Path to the bam.split.sh file.}
+\item{bam.split.sh}{Optional path to the `bam.split.sh` helper; defaults to `inst/scripts`.}
 
-\item{bam.r1}{A vector containing bam file path of Read2.}
+\item{bam.r1}{Optional character vector of Read1 BAM paths.}
 
-\item{samplenames}{A vector containing sample name of each bam file.}
+\item{bam.r2}{Character vector of Read2 BAM paths; required and must match `samplenames`.}
 
-\item{outpath}{A character describing where the file will be saved.}
+\item{samplenames}{Sample identifiers matching the provided BAM vectors.}
 
-\item{chrs}{A vector containing chromatin to use.}
-
-\item{geneanno}{A ranges describing gene annotation. 
-Options include "underscore", "dash", "numeric" and "dot". The string portion prior to these will be kept.}
-
-\item{intronanno}{A ranges describing intron annotation.}
-
-\item{cell.metadata}{A data.frame containing: cb, cell barcode id; celltype, cell type annotation; samplename, sample name.}
-
-\item{cache.bam2df}{A boolean value that determines whether cache bam2df file shoulde be used.}
-
-\item{chrom.size}{A data.frame containing: seqnames, chromatin id; seqlengths, chromatin length. seqnames as rowname of data.frame.}
-
-\item{threads}{The number of threads to be used for parallel computing.}
-
-\item{isbulk}{A boolean value that determines whether the RNA-seq library is bulk RNA-seq such as 3'-seq and Poly(A)-seq.}
+\item{outpath}{Output directory that will receive split BAMs and QC summaries.}
 }
 \description{
-Process bam files
+Runs the bundled `bam.split.sh` helper to split paired-end BAMs per chromosome,
+producing `outpath/chr.bam.{R1,R2}/<sample>/<chr>.bam`.
 }

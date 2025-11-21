@@ -6,9 +6,13 @@
 #' @export
 
 MakeAnnoFromGtf = function(gtf){
-  library(Rcpp)
-  cpppath = system.file("scripts/bam.split.sh", package = "scPAISO")
-  sourceCpp(cpppath)
+
+  if (!exists("calc_all_introns", mode = "function")) {
+    cpppath <- system.file("calc_introns.cpp", package = "scPAISO")
+    if (cpppath == "") stop("calc_introns.cpp not found inside scPAISO installation", call. = FALSE)
+    Rcpp::sourceCpp(cpppath)
+  }
+
   
   if (missing(gtf) || length(gtf) != 1) stop("gtf path must be a single string")
   if (!file.exists(gtf)) stop(paste0("gtf file not found: ", gtf))

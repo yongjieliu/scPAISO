@@ -2,24 +2,24 @@
 % Please edit documentation in R/findPAS.R
 \name{pas_peak_anno}
 \alias{pas_peak_anno}
-\title{pas peak annotation}
+\title{Annotate PAS peaks}
 \usage{
 pas_peak_anno(
-  gr_pas = pas_peak,
+  gr_pas,
   gene.anno,
   priority = c("utr3", "last.exon", "last.intron", "exon", "intron", "utr5"),
   outpath
 )
 }
 \arguments{
-\item{gr_pas}{A range of PAS peak.}
+\item{gr_pas}{GRanges of PAS peaks annotated with gene IDs.}
 
-\item{gene.anno}{A ranges list describing 3' UTR, exon, and intron.}
+\item{gene.anno}{List returned by `MakeAnnoFromGtf`.}
 
-\item{priority}{Annotation priority order.}
+\item{priority}{Priority order of genomic region labels.}
 
-\item{outpath}{Output directory where peakanno.pdf will be written.}
+\item{outpath}{Directory where `peakanno.pdf` should be saved.}
 }
 \description{
-pas peak annotation
+Annotate PAS peaks
 }

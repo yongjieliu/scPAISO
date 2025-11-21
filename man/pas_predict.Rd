@@ -5,15 +5,15 @@
 \title{PA isoform quantification}
 \usage{
 pas_predict(
-  gr_pas = pas_peak,
+  gr_pas,
   samplenames,
   chrs,
   outpath,
-  geneanno = geneanno,
-  intronanno = intronanno,
-  intron.remove = T,
+  geneanno,
+  intronanno,
+  intron.remove = TRUE,
   remove.bad = "dist",
-  cell.metadata = cell.metadata,
+  cell.metadata,
   fitmodel = "gamma",
   threads = 24
 )

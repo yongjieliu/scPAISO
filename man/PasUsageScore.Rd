@@ -5,13 +5,13 @@
 \title{Model fitting}
 \usage{
 PasUsageScore(
-  sc.pas = pas_sc_count,
+  sc.pas,
   gr_pas,
   min.pas.cutoff = 5,
   pseudo_count = 0.1,
   threads = 24,
   by = "utr",
-  out.matrix = F
+  out.matrix = FALSE
 )
 }
 \arguments{

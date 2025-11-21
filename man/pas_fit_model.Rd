@@ -8,11 +8,11 @@ pas_fit_model(
   samplenames,
   chrs,
   outpath,
-  gr_pas = pas_peak,
-  cache.dist = F,
-  intronanno = intronanno,
+  gr_pas,
+  cache.dist = FALSE,
+  intronanno,
   threads = 24,
-  intron.remove = T,
+  intron.remove = TRUE,
   sampling.frac = 4/100
 )
 }

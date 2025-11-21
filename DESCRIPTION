@@ -1,12 +1,16 @@
 Package: scPAISO
 Type: Package
-Title: scPAISO: identification and quantification of alternative polyadenylation sites in single cell RNA-seq data 
+Title: scPAISO: Identification and Quantification of Alternative Polyadenylation Sites in Single-Cell RNA-Seq Data
 Version: 0.1.1
 Author: Yongjie Liu
 Maintainer: Yongjie Liu <yongjieliu.2016@gmail.com>
-Description: A pipeline that leverages both reads from 3' tag-based scRNA-seq for de novo mapping and quantification of PASs. Enabling both known and novel PAS detection and isoform-level quantification.
+Description: Provides an end-to-end workflow that leverages both reads from 3' tag-based scRNA-seq for de novo mapping and quantification of polyadenylation sites. Enables the detection of both known and novel PASs, isoform-level quantification, and downstream visualization utilities.
 License: MIT + file LICENSE
+Depends:
+    R (>= 4.2.0)
 Encoding: UTF-8
+URL: https://github.com/yongjieliu/scPAISO
+BugReports: https://github.com/yongjieliu/scPAISO/issues
 RoxygenNote: 7.3.3
 Imports:
     Rsamtools,
@@ -31,7 +35,8 @@ Imports:
     methods,
     stats,
     utils,
-    grDevices
+    grDevices,
+    plyr
 Suggests:
     BSgenome.Hsapiens.UCSC.hg38,
     nabor,

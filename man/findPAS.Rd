@@ -9,7 +9,7 @@ findPAS(
   chrs,
   outpath,
   threads,
-  cache.covdata = F,
+  cache.covdata = FALSE,
   callpeak = "macs3",
   genomeSize = 2.7e+09,
   cutOff = 10^-5,
@@ -18,7 +18,7 @@ findPAS(
   sum.count = 10,
   min.count = 10,
   cpm.cutoff = 0.5,
-  BSg = BSgenome.Hsapiens.UCSC.hg38,
+  BSg = default_hg38_bsgenome(),
   literal = "AAAAAAAA",
   num_A = 10
 )
@@ -49,6 +49,8 @@ findPAS(
 \item{min.count}{The minimum count of PAS peak identification for "trim" method.}
 
 \item{cpm.cutoff}{The minimum CPM normalized count of PAS peak. PAS peaks with a count smaller than this will be removed.}
+
+\item{BSg}{BSgenome reference used when filtering PAS candidates; defaults to hg38 if available.}
 
 \item{literal}{If the literal sequence is detected within 5bp downstream and 20bp upstream of PAS 3' end, the PAS peak will be deleted.}
 

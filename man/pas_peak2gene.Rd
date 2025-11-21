@@ -2,27 +2,21 @@
 % Please edit documentation in R/findPAS.R
 \name{pas_peak2gene}
 \alias{pas_peak2gene}
-\title{link pas peak to gene}
+\title{Link PAS peaks to genes}
 \usage{
-pas_peak2gene(
-  gr_pas = pas_peak,
-  samplenames = samplenames,
-  chrs = chrs,
-  outpath,
-  threads = 24
-)
+pas_peak2gene(gr_pas, samplenames, chrs, outpath, threads = 24)
 }
 \arguments{
-\item{gr_pas}{A range of PAS peak.}
+\item{gr_pas}{GRanges of PAS peaks.}
 
-\item{samplenames}{A vector containing sample names.}
+\item{samplenames}{Vector of sample names processed by `ProcessBam`.}
 
-\item{chrs}{A vector containing chromatin to use.}
+\item{chrs}{Chromosomes included in the analysis.}
 
-\item{outpath}{Output directory consistent with previous steps.}
+\item{outpath}{Directory where bam2df/pas.df intermediates reside.}
 
-\item{threads}{The number of threads to be used for parallel computing.}
+\item{threads}{Number of threads for processing.}
 }
 \description{
-link pas peak to gene
+Link PAS peaks to genes
 }

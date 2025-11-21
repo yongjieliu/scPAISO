@@ -12,18 +12,17 @@
 #' @param min.gapwidth The minimum distance between PAS peaks. Peaks gaps smaller than this distance will be merged.
 #' @param sum.count The minimum count of PAS peak. Peaks count smaller than this will be removed.
 #' @param cpm.cutoff The minimum CPM normalized count of PAS peak. PAS peaks with a count smaller than this will be removed.
-#'
 #' @param min.count The minimum count of PAS peak identification for "trim" method.
-#' 
+#' @param BSg BSgenome reference used when filtering PAS candidates; defaults to hg38 if available.
 #' @param literal If the literal sequence is detected within 5bp downstream and 20bp upstream of PAS 3' end, the PAS peak will be deleted.
 #' @param num_A If more than the number of A base is detected within 5bp downstream and 20bp upstream of PAS 3' end, the PAS peak will be deleted.
 #' 
 #' @export
 
-findPAS <- function(samplenames,chrs,outpath,threads,cache.covdata = F,
+findPAS <- function(samplenames,chrs,outpath,threads,cache.covdata = FALSE,
                     callpeak = "macs3",genomeSize = 2.7e9, cutOff = 10^-5,additionalParams = "--nomodel",
                     min.gapwidth = 50,sum.count = 10,min.count = 10,cpm.cutoff = 0.5,
-                    BSg = BSgenome.Hsapiens.UCSC.hg38,literal = "AAAAAAAA",num_A = 10){
+                    BSg = default_hg38_bsgenome(),literal = "AAAAAAAA",num_A = 10){
   
   if (missing(samplenames) || length(samplenames) == 0) stop("samplenames cannot be empty")
   if (missing(chrs) || length(chrs) == 0) stop("chrs cannot be empty")
@@ -243,22 +242,22 @@ findPAS <- function(samplenames,chrs,outpath,threads,cache.covdata = F,
   return(gr_pas)
 }
 
-#' link pas peak to gene
-#' @param gr_pas A range of PAS peak.
-#' @param samplenames A vector containing sample names.
-#' @param chrs A vector containing chromatin to use. 
-#' @param outpath ，。
-#' @param threads The number of threads to be used for parallel computing.
-#' 
+#' Link PAS peaks to genes
+#'
+#' @param gr_pas GRanges of PAS peaks.
+#' @param samplenames Vector of sample names processed by `ProcessBam`.
+#' @param chrs Chromosomes included in the analysis.
+#' @param outpath Directory where bam2df/pas.df intermediates reside.
+#' @param threads Number of threads for processing.
+#'
 #' @export
-
-pas_peak2gene <- function(gr_pas = pas_peak,samplenames = samplenames, outpath = outpath,
-                          chrs = chrs,threads= 24){
+pas_peak2gene <- function(gr_pas,samplenames,chrs,outpath,threads= 24){
+  
+  if (missing(gr_pas) || !methods::is(gr_pas, "GRanges")) stop("gr_pas must be a GRanges object")
   
   if (missing(samplenames) || length(samplenames) == 0) stop("samplenames cannot be empty")
   if (missing(chrs) || length(chrs) == 0) stop("chrs cannot be empty")
   if (missing(outpath) || !dir.exists(outpath)) stop("outpath does not exist")
-  if (!methods::is(gr_pas, "GRanges")) stop("gr_pas must be a GRanges object")
   if (!("WhichMaxs" %in% colnames(mcols(gr_pas)))) {
     stop("gr_pas must contain WhichMaxs metadata column")
   }
@@ -335,15 +334,15 @@ pas_peak2gene <- function(gr_pas = pas_peak,samplenames = samplenames, outpath =
 }
 
 
-#' pas peak annotation
-#' @param gr_pas A range of PAS peak.
-#' @param gene.anno A ranges list describing 3' UTR, exon, and intron. 
-#' @param priority 。
-#' @param outpath ， peakanno.pdf。
-#' 
+#' Annotate PAS peaks
+#'
+#' @param gr_pas GRanges of PAS peaks annotated with gene IDs.
+#' @param gene.anno List returned by `MakeAnnoFromGtf`.
+#' @param priority Priority order of genomic region labels.
+#' @param outpath Directory where `peakanno.pdf` should be saved.
+#'
 #' @export
-
-pas_peak_anno <- function(gr_pas = pas_peak,gene.anno,
+pas_peak_anno <- function(gr_pas,gene.anno,
                           priority = c("utr3","last.exon","last.intron","exon","intron","utr5"),
                           outpath){
   if (missing(gene.anno) || !is.list(gene.anno)) stop("gene.anno must be a list containing region annotations")

@@ -24,27 +24,42 @@ enrichplot <- function(enrichout = enrichout,showsize = 10,showtitle = "Enrichme
   return(func.enrichplot)
 }
 
-plot_base_freq <- function(gr_pas = pas_peak,extend_base = 100,BSg = BSgenome.Hsapiens.UCSC.hg38,
+#' Plot nucleotide composition around PAS peaks
+#'
+#' @param gr_pas GRanges of PAS peaks that include the `WhichMaxs` metadata column.
+#' @param extend_base Number of bases to extend upstream/downstream of each peak apex.
+#' @param BSg BSgenome reference used to extract sequences.
+#' @param outpath Directory where the PDF will be written.
+#' @param outname Output filename (relative to `outpath`).
+#' @param ylim Upper bound for the fraction axis.
+#'
+#' @importFrom Biostrings consensusMatrix
+#' @export
+plot_base_freq <- function(gr_pas,extend_base = 100,BSg = default_hg38_bsgenome(),
                            outpath, outname = "pas.100bp.freq.pdf",ylim = 0.8){
-  if (!methods::is(gr_pas, "GRanges")) stop("gr_pas  GRanges ")
-  if (!methods::is(BSg, "BSgenome")) stop("BSg  BSgenome ")
-  if (!is.numeric(extend_base) || extend_base <= 0) stop("extend_base ")
-  if (!is.numeric(ylim) || ylim <= 0) stop("ylim ")
-  if (missing(outpath) || !dir.exists(outpath)) stop("outpath ")
+  if (missing(gr_pas) || !methods::is(gr_pas, "GRanges")) stop("gr_pas must be a GRanges object")
+  if (!methods::is(BSg, "BSgenome")) stop("BSg must be a BSgenome object")
+  if (!is.numeric(extend_base) || extend_base <= 0) stop("extend_base must be positive")
+  if (!is.numeric(ylim) || ylim <= 0) stop("ylim must be positive")
+  if (missing(outpath) || !dir.exists(outpath)) stop("outpath must point to an existing directory")
+  if (!"WhichMaxs" %in% colnames(mcols(gr_pas))) {
+    stop("gr_pas must contain a WhichMaxs metadata column")
+  }
   plot_pas <- gr_pas
   start(plot_pas) <- gr_pas$WhichMaxs - extend_base
   end(plot_pas) <- gr_pas$WhichMaxs + extend_base
   
   plot_pas <- getSeq(BSg, plot_pas)
 
-  counts <- consensusMatrix(plot_pas, as.prob = T,baseOnly=T)
-  counts <- data.frame(t(counts))
-  counts$other <- 1:nrow(counts)
-  counts$other <- counts$other - extend_base - 1
-  counts <- reshape2::melt(counts,id = "other")
+  counts <- consensusMatrix(plot_pas, as.prob = TRUE, baseOnly = TRUE)
+  counts <- data.table::as.data.table(t(counts))
+  counts$position <- seq_len(nrow(counts)) - extend_base - 1
+  counts <- data.table::melt(counts, id.vars = "position",
+                             variable.name = "base", value.name = "fraction")
+  counts <- as.data.frame(counts)
 
-  myplot <- ggplot(counts,aes(x = other,y = value, group=variable, color=variable)) +
-    geom_line() + xlab("Position") + ylab("Base fraction") + ylim(0,ylim)
+  myplot <- ggplot(counts,aes(x = position,y = fraction, group=base, color=base)) +
+    geom_line() + xlab("Position") + ylab("Base fraction") + ylim(0,ylim) +
     guides(color=guide_legend(title="Base"))
   
   pdf(file.path(outpath,outname),height = 5,width = 4)
@@ -542,4 +557,3 @@ write.igv.xml <- function(igv.pre = "ipst",outpath,cell.metadata){
 
   writeLines(xml.export,paste0(outpath,igv.pre,".igv_session.cluster.xml"))
 }
-

@@ -12,9 +12,9 @@
 #' 
 #' @export
 
-pas_fit_model <- function(samplenames,chrs,outpath,gr_pas = pas_peak,cache.dist = F,
-                          intronanno = intronanno,threads=24,
-                          intron.remove = T,sampling.frac = 4/100){
+pas_fit_model <- function(samplenames,chrs,outpath,gr_pas,cache.dist = FALSE,
+                          intronanno,threads=24,
+                          intron.remove = TRUE,sampling.frac = 4/100){
 
   if (missing(samplenames) || length(samplenames) == 0) stop("samplenames cannot be empty")
   if (missing(chrs) || length(chrs) == 0) stop("chrs cannot be empty")
@@ -279,10 +279,10 @@ pas_bulk <- function(samplenames,chrs,outpath,cell.metadata = cell.metadata,thre
 #' 
 #' @export
 
-pas_predict <- function(gr_pas = pas_peak,samplenames,chrs,outpath,
-                        geneanno = geneanno,intronanno = intronanno,
-                        intron.remove = T,remove.bad = "dist",
-                        cell.metadata = cell.metadata,fitmodel = "gamma",threads=24){
+pas_predict <- function(gr_pas,samplenames,chrs,outpath,
+                        geneanno,intronanno,
+                        intron.remove = TRUE,remove.bad = "dist",
+                        cell.metadata,fitmodel = "gamma",threads=24){
   
   start(gr_pas) = start(gr_pas) - 16
   end(gr_pas) = end(gr_pas) + 16
@@ -553,7 +553,7 @@ pas_impute <- function(matDR = sc.pas.merged@reductions$pca@cell.embeddings,
 #' 
 #' @export
 
-PasUsageScore <- function(sc.pas = pas_sc_count,gr_pas,min.pas.cutoff = 5,pseudo_count = 0.1,threads = 24,by = "utr",out.matrix = F){
+PasUsageScore <- function(sc.pas,gr_pas,min.pas.cutoff = 5,pseudo_count = 0.1,threads = 24,by = "utr",out.matrix = FALSE){
   
   if (missing(sc.pas)) stop("sc.pas cannot be missing")
   if (is.null(rownames(sc.pas)) || is.null(colnames(sc.pas))) stop("sc.pas must have row/col names")

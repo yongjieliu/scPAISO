@@ -9,6 +9,7 @@ scPAISO is an end-to-end APA analysis workflow for 3′ tag-based scRNA-seq. The
 - Optional packages:
   - `BSgenome.Hsapiens.UCSC.hg38` (default genome; install different `BSgenome` objects for other species).
   - `nabor` (KNN-based imputation in `pas_impute`).
+  - Visualization helpers showcased below additionally use `plyranges`, `RColorBrewer`, `cowplot`, and `ComplexHeatmap`.
 
 To install the development version, please use:
 
@@ -24,7 +25,11 @@ remotes::install_url("https://github.com/yongjieliu/scPAISO/archive/refs/tags/v0
 
 ## Demo and Test Data
 
-Lightweight demo data (chr21/22 subsets, annotations, intermediate results) are hosted on Zenodo (https://zenodo.org/records/17656388)
+Lightweight demo data (chr21/22 subsets, annotations, intermediate results) are hosted on Zenodo (https://zenodo.org/records/17656388).
+
+1. Download the `scPAISO.test` archive from Zenodo and extract it beside this repository, e.g. `tar -xzf scPAISO.test.tar.gz`.
+2. Ensure the extracted folder is named `scPAISO.test/`; the Quick Start below assumes that path for both inputs and outputs.
+3. Alternative smoke datasets are shipped under `tests/<species>` for scripted validation.
 
 
 ## Quick Start (chr21/22 subset)
@@ -43,25 +48,11 @@ Define the essential parameters:
 
 ```r
 library(scPAISO)
-library(Rsamtools)
-library(dplyr)
 library(data.table)
-library(Matrix)
-library(GenomicAlignments)
-library(future.apply)
-library(rtracklayer)
-library(scales)
+library(dplyr)
 
-library(plyranges)
-
-library(fitdistrplus)
-
-library(ggplot2)
-library(grid)
-library(RColorBrewer)
 library(cowplot)
 theme_set(theme_cowplot(15))
-library(ComplexHeatmap)
 
 library('BSgenome.Hsapiens.UCSC.hg38')
 
@@ -108,7 +99,11 @@ pas_peak <- findPAS(samplenames, chrs, outpath, threads,
 pas_peak <- pas_peak2gene(pas_peak, samplenames, chrs, outpath, threads)
 
 # labels regions (3′ UTR, exon, intron) using the annotation list generated via `MakeAnnoFromGtf`
-pas_peak <- pas_peak_anno(pas_peak, gene.anno, outpath)
+pas_peak <- pas_peak_anno(pas_peak, gene.anno, outpath = outpath)
+
+# plot base frequence of surrounding PAS peak
+plot_base_freq(gr_pas = pas_peak,extend_base = 100,BSg = BSgenome.Hsapiens.UCSC.hg38,
+  outpath = outpath,outname = "pas.100bp.freq.pdf")
 
 # estimates read-length distributions per sample; reducing `sampling.frac` speeds modeling.
 pas_fit_model(samplenames, chrs, outpath, gr_pas = pas_peak,
@@ -125,7 +120,7 @@ pas_sc_count <- pas_predict(pas_peak, samplenames, chrs, outpath,
 # computes per-cell PAS usage scores;
 # To obtain the average APA score per cell, set `out.matrix = False` (the default).
 # Conversely, setting it to TRUE returns  the APA rank score of each gene in each cell (consumes more computational time and memory).
-PasUsageScore(pas_sc_count, gr_pas = pas_peak,
+apa.score = PasUsageScore(pas_sc_count, gr_pas = pas_peak,
               min.pas.cutoff = 3, by = "utr",out.matrix = F,
               threads = threads)
 ```
