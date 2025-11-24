@@ -20,7 +20,7 @@ remotes::install_github("yongjieliu/scPAISO")
 Or to install a specific version:
 
 ```r
-remotes::install_url("https://github.com/yongjieliu/scPAISO/archive/refs/tags/v0.1.0.tar.gz")
+remotes::install_url("https://github.com/yongjieliu/scPAISO/archive/refs/tags/v0.1.1.tar.gz")
 ```
 
 ## Demo and Test Data
